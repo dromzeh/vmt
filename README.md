@@ -1,6 +1,6 @@
-# Discord Voice Message Transcriber
+# VMT - Discord Voice Message Transcriber and Translator
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blueviolet.svg)](https://github.com/dromzeh/discordVMTranscriber)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blueviolet.svg)](https://github.com/dromzeh/vmt)
 [![Formatter: Black](https://img.shields.io/badge/formatter-Black-lightgrey.svg)](https://black.readthedocs.io/en/stable/)
 
 A Discord bot that can transcribe and translate Discord Voice Messages.
@@ -20,7 +20,7 @@ A Discord bot that can transcribe and translate Discord Voice Messages.
 > **Note**
 > Bot requires Intents to be enabled in the developer portal & an API key for the DeepL API.
 
-- Clone the repository: `git clone https://github.com/dromzeh/discordVMTranscriber.git`
+- Clone the repository: `git clone https://github.com/dromzeh/vmt.git`
 - Rename the `config.example.json` file to `config.json` and fill in the necessary values (See [Configuration](#configuration)) 
 - Run the bot: python bot.py
 
