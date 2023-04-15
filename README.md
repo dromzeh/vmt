@@ -21,8 +21,8 @@ A Discord bot that can transcribe and translate Discord Voice Messages.
 > Bot requires Intents to be enabled in the developer portal & an API key for the DeepL API.
 
 - Clone the repository: `git clone https://github.com/dromzeh/vmt.git`
-- Rename the `config.example.json` file to `config.json` and fill in the necessary values (See [Configuration](#configuration)) 
-- Run the bot: python bot.py
+- Rename the `config.example.json` file to `config.json` inside `src/config` and fill in the necessary values (See [Configuration](#configuration)) 
+- Run the bot inside the `/src` folder: `python bot.py`
 
 ## Usage
 
