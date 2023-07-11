@@ -1,5 +1,6 @@
 import io
 import json
+import typing
 
 import discord
 from discord.ext import commands
@@ -39,18 +40,9 @@ class Transcriber(commands.Cog):
             )
 
         # if there was no reply attached or if the replied message does not have an attachment, find the most recent message that fits the criteria.
-        if not replied_message or (
-            replied_message
-            and (
-                not replied_message.attachments or not replied_message.flags.value >> 13
-            )
-        ):
+        if not msg_has_voice_note(replied_message):
             async for message in ctx.channel.history(limit=None, oldest_first=False):
-                if (
-                    message.author != ctx.bot.user
-                    and message.attachments
-                    and message.flags.value >> 13
-                ):
+                if message.author != ctx.bot.user and msg_has_voice_note(message):
                     replied_message = message
                     break
 
@@ -61,9 +53,72 @@ class Transcriber(commands.Cog):
             return
 
         author = replied_message.author
-        message = await ctx.reply(f"Transcribing the Voice Message from {author}...")
 
-        voice_msg_bytes = await replied_message.attachments[
+        response = await ctx.reply(f"Transcribing the Voice Message from {author}...")
+        try:
+            transcribed_text = await transcribe_msg(replied_message)
+            await response.delete()
+
+        except sr.UnknownValueError as e:
+            await response.edit(
+                content=f"Could not transcribe the Voice Message from {author} as the response was empty."
+            )
+            return
+
+        except Exception as e:
+            await response.edit(
+                content=f"Could not transcribe the Voice Message from {author} due to an error."
+            )
+            print(e)
+            return
+
+        embed = discord.Embed(
+            color=discord.Color.og_blurple(),
+            title=f"🔊 {author.name}'s Voice Message",
+        )
+        embed.add_field(
+            name=f"Transcription", value=f"```{transcribed_text}```", inline=False
+        )
+
+        # check if translate_to was passed
+        if (
+            translate_to is not None
+            and transcribed_text
+            and translate_to in self.config["language_codes"]
+        ):
+            # translate the text
+            deepl_translator = deepl.Translator(
+                auth_key=self.config["deepl_api_key"]
+            )
+            translated_text = deepl_translator.translate_text(
+                transcribed_text, target_lang=translate_to
+            )
+            embed.add_field(
+                name=f"Translation (Into {translate_to.upper()})",
+                value=f"```{translated_text}```",
+                inline=False,
+            )
+
+        embed.set_footer(
+            text=f"Powered by Google Speech Recognition and DeepL API - requested by {ctx.author}"
+        )
+        embed_message = await replied_message.reply(
+            embed=embed, mention_author=False
+        )
+
+
+
+def msg_has_voice_note(msg: typing.Optional[discord.Message]) -> bool:
+    if not msg: return False
+    if not msg.attachments or not msg.flags.value >> 13: return False
+    return True
+
+async def transcribe_msg(msg: typing.Optional[discord.Message]) -> typing.Optional[typing.Union[typing.Any,list,tuple]]:
+        if not msg_has_voice_note(msg): return None
+
+
+
+        voice_msg_bytes = await msg.attachments[
             0
         ].read()  # read the voice message as bytes
         voice_msg = io.BytesIO(voice_msg_bytes)
@@ -80,52 +135,15 @@ class Transcriber(commands.Cog):
 
         try:
             transcribed_text = recognizer.recognize_google(audio_data)
-            await message.delete()
 
-            embed = discord.Embed(
-                color=discord.Color.og_blurple(),
-                title=f"🔊 {author.name}'s Voice Message",
-            )
-            embed.add_field(
-                name=f"Transcription", value=f"```{transcribed_text}```", inline=False
-            )
-
-            # check if translate_to was passed
-            if (
-                translate_to is not None
-                and transcribed_text
-                and translate_to in self.config["language_codes"]
-            ):
-                # translate the text
-                deepl_translator = deepl.Translator(
-                    auth_key=self.config["deepl_api_key"]
-                )
-                translated_text = deepl_translator.translate_text(
-                    transcribed_text, target_lang=translate_to
-                )
-                embed.add_field(
-                    name=f"Translation (Into {translate_to.upper()})",
-                    value=f"```{translated_text}```",
-                    inline=False,
-                )
-
-            embed.set_footer(
-                text=f"Powered by Google Speech Recognition and DeepL API - requested by {ctx.author}"
-            )
-            embed_message = await replied_message.reply(
-                embed=embed, mention_author=False
-            )
-
-        except sr.UnknownValueError:
-            await message.edit(
-                content=f"Could not transcribe the Voice Message from {author} as the response was empty."
-            )
+        except sr.UnknownValueError as e:
+            raise e
 
         except Exception as e:
-            await message.edit(
-                content=f"Could not transcribe the Voice Message from {author} due to an error."
-            )
-            print(e)
+            raise e
+
+        return transcribed_text
+
 
 
 async def setup(bot):
