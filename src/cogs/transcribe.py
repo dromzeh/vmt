@@ -7,6 +7,7 @@ from discord.ext import commands
 import pydub
 import speech_recognition as sr
 import deepl
+import textwrap
 
 
 class Transcriber(commands.Cog):
@@ -72,14 +73,7 @@ class Transcriber(commands.Cog):
             print(e)
             return
 
-        embed = discord.Embed(
-            color=discord.Color.og_blurple(),
-            title=f"🔊 {author.name}'s Voice Message",
-        )
-        embed.add_field(
-            name=f"Transcription", value=f"```{transcribed_text}```", inline=False
-        )
-
+        translated_text = None
         # check if translate_to was passed
         if (
             translate_to is not None
@@ -93,19 +87,64 @@ class Transcriber(commands.Cog):
             translated_text = deepl_translator.translate_text(
                 transcribed_text, target_lang=translate_to
             )
+
+        embed = make_embed(transcribed_text, author, ctx.author, translate_to, translated_text)
+
+
+        embed_message = await replied_message.reply(
+            embed=embed, mention_author=False
+        )
+
+    @commands.Cog.listener("on_message")
+    async def auto_transcribe(self, msg: discord.Message):
+        if not msg_has_voice_note(msg): return
+
+        await msg.add_reaction("\N{HOURGLASS}")
+        try:
+            transcribed_text = await transcribe_msg(msg)
+            embed = make_embed(transcribed_text, msg.author)
+            await msg.reply(embed = embed)
+
+        except sr.UnknownValueError as e:
+            await msg.reply(
+                content=f"Could not transcribe the Voice Message from {msg.author} as the response was empty."
+            )
+        except Exception as e:
+            await msg.edit(
+                content=f"Could not transcribe the Voice Message from {msg.author} due to an error."
+            )
+            print(e)
+        await msg.remove_reaction("\N{HOURGLASS}", self.bot.user)
+
+
+def make_embed(transcribed_text, author, ctx_author = None, translate_to = None, translated_text = None):
+        embed = discord.Embed(
+            color=discord.Color.og_blurple(),
+            title=f"🔊 {author.name}'s Voice Message",
+        )
+        embed.add_field(
+            name=f"Transcription",
+            value= textwrap.dedent(
+            f"""
+            ```
+            {transcribed_text}
+            ```
+            [vmt bot](https://github.com/dromzeh/vmt) by [@strazto](https://instagram.com/strazto) & [@dromzeh](https://github.com/dromzeh)
+            """),
+            inline=False
+        )
+
+        if translate_to and translated_text:
             embed.add_field(
                 name=f"Translation (Into {translate_to.upper()})",
                 value=f"```{translated_text}```",
                 inline=False,
             )
 
-        embed.set_footer(
-            text=f"Powered by Google Speech Recognition and DeepL API - requested by {ctx.author}"
-        )
-        embed_message = await replied_message.reply(
-            embed=embed, mention_author=False
-        )
+        if ctx_author:
+            embed.set_footer(text=f"Transcribe requested by {ctx_author}")
 
+        return embed
 
 
 def msg_has_voice_note(msg: typing.Optional[discord.Message]) -> bool:
@@ -115,8 +154,6 @@ def msg_has_voice_note(msg: typing.Optional[discord.Message]) -> bool:
 
 async def transcribe_msg(msg: typing.Optional[discord.Message]) -> typing.Optional[typing.Union[typing.Any,list,tuple]]:
         if not msg_has_voice_note(msg): return None
-
-
 
         voice_msg_bytes = await msg.attachments[
             0
@@ -143,7 +180,6 @@ async def transcribe_msg(msg: typing.Optional[discord.Message]) -> typing.Option
             raise e
 
         return transcribed_text
-
 
 
 async def setup(bot):
