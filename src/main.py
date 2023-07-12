@@ -15,7 +15,7 @@ class Bot(commands.Bot):
         # remove the default help command
         self.remove_command("help")
 
-    async def setup_hook(self) -> None: 
+    async def setup_hook(self) -> None:
         cogsLoaded = 0
         cogsCount = 0
         for cog_file in os.listdir("cogs"):

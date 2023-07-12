@@ -21,7 +21,9 @@ class Transcriber(commands.Cog):
 
     # transcribe / translate command
     @commands.command(aliases=["t", "translate", "tr", "trans"])
-    async def transcribe(self, ctx, *, translate_to=None): # takes an optional argument, translate_to, which is the language code to translate the transcribed text to.
+    async def transcribe(
+        self, ctx, *, translate_to=None
+    ):  # takes an optional argument, translate_to, which is the language code to translate the transcribed text to.
         # check if translate_to was passed
         if translate_to is not None:
             translate_to = translate_to.upper()
@@ -81,29 +83,27 @@ class Transcriber(commands.Cog):
             and translate_to in self.config["language_codes"]
         ):
             # translate the text
-            deepl_translator = deepl.Translator(
-                auth_key=self.config["deepl_api_key"]
-            )
+            deepl_translator = deepl.Translator(auth_key=self.config["deepl_api_key"])
             translated_text = deepl_translator.translate_text(
                 transcribed_text, target_lang=translate_to
             )
 
-        embed = make_embed(transcribed_text, author, ctx.author, translate_to, translated_text)
-
-
-        embed_message = await replied_message.reply(
-            embed=embed, mention_author=False
+        embed = make_embed(
+            transcribed_text, author, ctx.author, translate_to, translated_text
         )
+
+        embed_message = await replied_message.reply(embed=embed, mention_author=False)
 
     @commands.Cog.listener("on_message")
     async def auto_transcribe(self, msg: discord.Message):
-        if not msg_has_voice_note(msg): return
+        if not msg_has_voice_note(msg):
+            return
 
         await msg.add_reaction("\N{HOURGLASS}")
         try:
             transcribed_text = await transcribe_msg(msg)
             embed = make_embed(transcribed_text, msg.author)
-            await msg.reply(embed = embed)
+            await msg.reply(embed=embed)
 
         except sr.UnknownValueError as e:
             await msg.reply(
@@ -117,69 +117,76 @@ class Transcriber(commands.Cog):
         await msg.remove_reaction("\N{HOURGLASS}", self.bot.user)
 
 
-def make_embed(transcribed_text, author, ctx_author = None, translate_to = None, translated_text = None):
-        embed = discord.Embed(
-            color=discord.Color.og_blurple(),
-            title=f"🔊 {author.name}'s Voice Message",
-        )
-        embed.add_field(
-            name=f"Transcription",
-            value= textwrap.dedent(
+def make_embed(
+    transcribed_text, author, ctx_author=None, translate_to=None, translated_text=None
+):
+    embed = discord.Embed(
+        color=discord.Color.og_blurple(),
+        title=f"🔊 {author.name}'s Voice Message",
+    )
+    embed.add_field(
+        name=f"Transcription",
+        value=textwrap.dedent(
             f"""
             ```
             {transcribed_text}
             ```
             [vmt bot](https://github.com/dromzeh/vmt) by [@strazto](https://instagram.com/strazto) & [@dromzeh](https://github.com/dromzeh)
-            """),
-            inline=False
+            """
+        ),
+        inline=False,
+    )
+
+    if translate_to and translated_text:
+        embed.add_field(
+            name=f"Translation (Into {translate_to.upper()})",
+            value=f"```{translated_text}```",
+            inline=False,
         )
 
-        if translate_to and translated_text:
-            embed.add_field(
-                name=f"Translation (Into {translate_to.upper()})",
-                value=f"```{translated_text}```",
-                inline=False,
-            )
+    if ctx_author:
+        embed.set_footer(text=f"Transcribe requested by {ctx_author}")
 
-        if ctx_author:
-            embed.set_footer(text=f"Transcribe requested by {ctx_author}")
-
-        return embed
+    return embed
 
 
 def msg_has_voice_note(msg: typing.Optional[discord.Message]) -> bool:
-    if not msg: return False
-    if not msg.attachments or not msg.flags.value >> 13: return False
+    if not msg:
+        return False
+    if not msg.attachments or not msg.flags.value >> 13:
+        return False
     return True
 
-async def transcribe_msg(msg: typing.Optional[discord.Message]) -> typing.Optional[typing.Union[typing.Any,list,tuple]]:
-        if not msg or not msg_has_voice_note(msg): return None
 
-        voice_msg_bytes = await msg.attachments[
-            0
-        ].read()  # read the voice message as bytes
-        voice_msg = io.BytesIO(voice_msg_bytes)
+async def transcribe_msg(
+    msg: typing.Optional[discord.Message],
+) -> typing.Optional[typing.Union[typing.Any, list, tuple]]:
+    if not msg or not msg_has_voice_note(msg):
+        return None
 
-        # convert the voice message to a .wav file
-        audio_segment = pydub.AudioSegment.from_file(voice_msg)
-        wav_bytes = io.BytesIO()
-        audio_segment.export(wav_bytes, format="wav")
+    voice_msg_bytes = await msg.attachments[0].read()  # read the voice message as bytes
+    voice_msg = io.BytesIO(voice_msg_bytes)
 
-        # transcribe the audio using Google Speech Recognition API
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(wav_bytes) as source:
-            audio_data = recognizer.record(source)
+    # convert the voice message to a .wav file
+    audio_segment = pydub.AudioSegment.from_file(voice_msg)
+    wav_bytes = io.BytesIO()
+    audio_segment.export(wav_bytes, format="wav")
 
-        try:
-            transcribed_text = recognizer.recognize_google(audio_data)
+    # transcribe the audio using Google Speech Recognition API
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(wav_bytes) as source:
+        audio_data = recognizer.record(source)
 
-        except sr.UnknownValueError as e:
-            raise e
+    try:
+        transcribed_text = recognizer.recognize_google(audio_data)
 
-        except Exception as e:
-            raise e
+    except sr.UnknownValueError as e:
+        raise e
 
-        return transcribed_text
+    except Exception as e:
+        raise e
+
+    return transcribed_text
 
 
 async def setup(bot):

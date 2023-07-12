@@ -23,7 +23,7 @@ class OtherCommands(commands.Cog):
 
         for language in self.config["language_codes"]:
             embed.add_field(
-                name=f"**{self.config['language_codes'][language]}**", 
+                name=f"**{self.config['language_codes'][language]}**",
                 value=f"`{language}`",
                 inline=True,
             )
