@@ -153,7 +153,7 @@ def msg_has_voice_note(msg: typing.Optional[discord.Message]) -> bool:
     return True
 
 async def transcribe_msg(msg: typing.Optional[discord.Message]) -> typing.Optional[typing.Union[typing.Any,list,tuple]]:
-        if not msg_has_voice_note(msg): return None
+        if not msg or not msg_has_voice_note(msg): return None
 
         voice_msg_bytes = await msg.attachments[
             0
