@@ -15,6 +15,12 @@ A Discord bot that can transcribe and translate Discord Voice Messages.
 - speech recognition
 - deepl
 
+Run the following:
+
+```bash
+pip install -r requirements.txt
+```
+
 ## Installation
 
 > **Note**
@@ -22,7 +28,21 @@ A Discord bot that can transcribe and translate Discord Voice Messages.
 
 - Clone the repository: `git clone https://github.com/dromzeh/vmt.git`
 - Rename the `config.example.json` file to `config.json` inside `src/config` and fill in the necessary values (See [Configuration](#configuration)) 
-- Run the bot inside the `/src` folder: `python bot.py`
+
+Once the configuration file has been filled, you may run the bot using one of the following methods:
+
+### Native Installation
+
+- Install the requirements `pip install -r requirements.txt`
+- Run the bot inside the `/src` folder: `python main.py`
+
+### Docker Installation (Easier)
+
+Assuming `docker` and `docker-compose` are installed
+
+```bash
+docker-compose -f compose.yaml up
+```
 
 ## Usage
 
